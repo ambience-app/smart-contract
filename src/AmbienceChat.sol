@@ -57,6 +57,12 @@ contract AmbienceChat {
     /// @dev Counter for generating unique room IDs
     uint256 private roomIdCounter;
 
+    /// @dev Time (in seconds) a user must wait between sending messages
+    uint256 public constant MESSAGE_COOLDOWN = 1 minutes;
+
+    /// @dev Mapping to track the last message timestamp for each address
+    mapping(address => uint256) public lastMessageTime;
+
     /// @dev Mapping from message ID to Message struct
     mapping(uint256 => Message) public messages;
 
@@ -294,6 +300,13 @@ contract AmbienceChat {
     function sendMessage(uint256 roomId, string calldata content) external canAccessRoom(roomId) returns (uint256) {
         require(bytes(content).length > 0, "Message cannot be empty");
         require(bytes(content).length <= 1000, "Message too long");
+        require(
+            block.timestamp >= lastMessageTime[msg.sender] + MESSAGE_COOLDOWN,
+            "Cooldown period not met. Please wait before sending another message."
+        );
+
+        // Update the last message time for this sender
+        lastMessageTime[msg.sender] = block.timestamp;
 
         uint256 messageId = messageIdCounter++;
 
