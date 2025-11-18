@@ -64,6 +64,9 @@ contract AmbienceChatTest is Test {
         vm.prank(user1);
         uint256 roomId = ambienceChat.createRoom("Test Room", false);
         
+        // Fast forward time to ensure we're past any potential cooldown from setup
+        vm.warp(block.timestamp + 61 seconds);
+        
         // Send a message
         string memory messageContent = "Hello, world!";
         vm.prank(user1);
@@ -75,7 +78,7 @@ contract AmbienceChatTest is Test {
         assertEq(content, messageContent);
         
         // Check room message count
-        (,,, uint256 messageCount) = ambienceChat.getRoomInfo(roomId);
+        (,,,, uint256 messageCount) = ambienceChat.rooms(roomId);
         assertEq(messageCount, 1);
     }
     
@@ -93,6 +96,9 @@ contract AmbienceChatTest is Test {
         vm.prank(user1);
         ambienceChat.addRoomMember(roomId, user2);
         
+        // Fast forward time to pass the cooldown period
+        vm.warp(block.timestamp + 61 seconds); // 1 minute + 1 second
+        
         // Now user2 should be able to send message
         vm.prank(user2);
         ambienceChat.sendMessage(roomId, "Hello from user2");
@@ -102,17 +108,20 @@ contract AmbienceChatTest is Test {
         // Use the default General room (roomId = 0)
         uint256 roomId = 0;
         
+        // Fast forward time to ensure we're past any potential cooldown from setup
+        vm.warp(block.timestamp + 61 seconds);
+        
         // First message
         vm.prank(user1);
         ambienceChat.sendMessage(roomId, "First message");
         
         // Try to send another message immediately (should fail)
         vm.prank(user1);
-        vm.expectRevert("Message cooldown period has not passed");
+        vm.expectRevert("Cooldown period not met. Please wait before sending another message.");
         ambienceChat.sendMessage(roomId, "Second message");
         
         // Fast forward time (1 minute + 1 second)
-        vm.warp(block.timestamp + 61);
+        vm.warp(block.timestamp + 61 seconds);
         
         // Now should work
         vm.prank(user1);
